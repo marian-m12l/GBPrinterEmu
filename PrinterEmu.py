@@ -57,97 +57,25 @@ def CreateImage(data, palette=0xe4, margins=0x00):
                     for j in range(TILE_SIZE):
                         index = (tile[i * 2] >> (7 - j)) & 0b11
                         pixels[(w * TILE_SIZE) + j, ((h+marginTop) * TILE_SIZE) + i] = colours[index]
-
-        img_timestamp = time.strftime('%Y%m%d - %H%M%S')
-        img.save(f"images/decoded_{img_timestamp}.png")
-        print(f"Saved to images/decoded_{img_timestamp}.png!")
+        return img
     except IndexError as e:
         print("Provided data doesn't match expected size, " \
               "please double check your hex dump!")
         exit()
 
-def CreateImageRGB(red_data, green_data, blue_data, palette=0xe4, margins=0x00):
-    if len(red_data) == 0:
-        print("No data for red later, can't do anything. Exiting...")
-        exit()
-    elif len(green_data) == 0:
-        print("No data for green later, can't do anything. Exiting...")
-        exit()
-    elif len(blue_data) == 0:
-        print("No data for blue later, can't do anything. Exiting...")
-        exit()
+def SaveImage(img):
+    img_timestamp = time.strftime('%Y%m%d - %H%M%S')
+    img.save(f"images/decoded_{img_timestamp}.png")
+    print(f"Saved to images/decoded_{img_timestamp}.png!")
 
-    red_data = bytes.fromhex(red_data)
-    green_data = bytes.fromhex(green_data)
-    blue_data = bytes.fromhex(blue_data)
-
-    print(f"{str(len(red_data))} bytes to print...")
-
-    red_dump = [red_data[i:i+16] for i in range(0, len(red_data), 16)]
-    print(f"{str(len(red_dump))} red tiles to print...")
-
-    green_dump = [green_data[i:i+16] for i in range(0, len(green_data), 16)]
-    print(f"{str(len(green_dump))} green tiles to print...")
-
-    blue_dump = [blue_data[i:i+16] for i in range(0, len(blue_data), 16)]
-    print(f"{str(len(blue_dump))} blue tiles to print...")
-
-    LINES_COUNT = len(red_dump) // TILES_PER_LINE
-    print(f"{LINES_COUNT} lines to print...")
-
-    # Handle margins
-    marginTop = (margins>>4) & 0x0f
-    marginBottom = margins & 0x0f
-    print(f"Margins: {marginTop} line(s) before, {marginBottom} line(s) after")
-
-    # Compute colors from palette parameter
-    colours = [palette>>6, (palette>>4)&0b11, (palette>>2)&0b11, palette&0b11]
-    colours = [_*0x55 for _ in colours]
-    colours = [(_,_,_) for _ in colours]
-    print(f"Palette colours: {colours}")
-
-    try:
-        red_img = Image.new(mode='RGB', size=(TILES_PER_LINE * TILE_SIZE, (LINES_COUNT+marginTop+marginBottom) * TILE_SIZE), color=(255,255,255))
-        red_pixels = red_img.load()
-        for h in range(LINES_COUNT):
-            for w in range(TILES_PER_LINE):
-                tile = red_dump[(h*TILES_PER_LINE) + w]
-                for i in range(TILE_SIZE):
-                    for j in range(TILE_SIZE):
-                        index = (tile[i * 2] >> (7 - j)) & 0b11
-                        red_pixels[(w * TILE_SIZE) + j, ((h+marginTop) * TILE_SIZE) + i] = colours[index]
-        red_img = red_img.convert("L")
-
-        green_img = Image.new(mode='RGB', size=(TILES_PER_LINE * TILE_SIZE, (LINES_COUNT+marginTop+marginBottom) * TILE_SIZE), color=(255,255,255))
-        green_pixels = green_img.load()
-        for h in range(LINES_COUNT):
-            for w in range(TILES_PER_LINE):
-                tile = green_dump[(h*TILES_PER_LINE) + w]
-                for i in range(TILE_SIZE):
-                    for j in range(TILE_SIZE):
-                        index = (tile[i * 2] >> (7 - j)) & 0b11
-                        green_pixels[(w * TILE_SIZE) + j, ((h+marginTop) * TILE_SIZE) + i] = colours[index]
-        green_img = green_img.convert("L")
-
-        blue_img = Image.new(mode='RGB', size=(TILES_PER_LINE * TILE_SIZE, (LINES_COUNT+marginTop+marginBottom) * TILE_SIZE), color=(255,255,255))
-        blue_pixels = blue_img.load()
-        for h in range(LINES_COUNT):
-            for w in range(TILES_PER_LINE):
-                tile = blue_dump[(h*TILES_PER_LINE) + w]
-                for i in range(TILE_SIZE):
-                    for j in range(TILE_SIZE):
-                        index = (tile[i * 2] >> (7 - j)) & 0b11
-                        blue_pixels[(w * TILE_SIZE) + j, ((h+marginTop) * TILE_SIZE) + i] = colours[index]
-        blue_img = blue_img.convert("L")
-
-        rgb_image = Image.merge("RGB", (red_img, green_img, blue_img))
-        img_timestamp = time.strftime('%Y%m%d - %H%M%S')
-        rgb_image.save(f"images/decoded_rgb_{time}.png")
-        print(f"Saved to images/decoded_rgb_{img_timestamp}.png!")
-    except IndexError as e:
-        print("Provided data doesn't match expected size, " \
-              "please double check your hex dump!")
-        exit()
+def SaveImageRGB(red_img, green_img, blue_img):
+    red_img = red_img.convert("L")
+    green_img = green_img.convert("L")
+    blue_img = blue_img.convert("L")
+    rgb_image = Image.merge("RGB", (red_img, green_img, blue_img))
+    img_timestamp = time.strftime('%Y%m%d - %H%M%S')
+    rgb_image.save(f"images/decoded_rgb_{img_timestamp}.png")
+    print(f"Saved to images/decoded_rgb_{img_timestamp}.png!")
 
 #############
 # USB stuff #
@@ -254,7 +182,7 @@ choice = input("Number: ")
 
 if choice.startswith("1"):
     while True:
-        CreateImage(CollectData())
+        SaveImage(CreateImage(CollectData()))
         another = input("Print another? (y/N): ")
         if another.upper().startswith("Y"):
             continue
@@ -264,12 +192,12 @@ if choice.startswith("1"):
 elif choice.startswith("2"):
     while True:
         print("Please print your red layer")
-        red_data = CollectData()
+        red_img = CreateImage(CollectData())
         print("Please print your green layer")
-        green_data = CollectData()
+        green_img = CreateImage(CollectData())
         print("Please print your blue layer")
-        blue_data = CollectData()
-        CreateImageRGB(red_data, green_data, blue_data)
+        blue_img = CreateImage(CollectData())
+        SaveImageRGB(red_img, green_img, blue_img)
         another = input("Print another? (y/N): ")
         if another.upper().startswith("Y"):
             continue
