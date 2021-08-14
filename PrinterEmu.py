@@ -21,12 +21,13 @@ import usb.core
 TILES_PER_LINE = 20
 TILE_SIZE = 8
 
-def CreateImage(data, palette=0xe4, margins=0x00):
+def CreateImage(data, params="0100e440"):
     if len(data) == 0:
         print("There's nothing to do. Exiting...")
         exit()
 
     data = bytes.fromhex(data)
+    params = bytes.fromhex(params)
 
     print(f"{str(len(data))} bytes to print...")
 
@@ -37,11 +38,13 @@ def CreateImage(data, palette=0xe4, margins=0x00):
     print(f"{LINES_COUNT} lines to print...")
 
     # Handle margins
+    margins = params[1]
     marginTop = (margins>>4) & 0x0f
     marginBottom = margins & 0x0f
     print(f"Margins: {marginTop} line(s) before, {marginBottom} line(s) after")
 
     # Compute colors from palette parameter
+    palette = params[2]
     colours = [palette>>6, (palette>>4)&0b11, (palette>>2)&0b11, palette&0b11]
     colours = [_*0x55 for _ in colours]
     colours = [(_,_,_) for _ in colours]
@@ -159,9 +162,9 @@ def CollectData():
         recv = epIn.read(epIn.wMaxPacketSize, 30000)
         data += ('%s' % '{:{fill}{width}{base}}'.format(int.from_bytes(recv, byteorder='big'), fill='0', width=len(recv*2), base='x'))
         # print(len(data))
-        if len(data) == 11520:
+        if (data[-8:] == "1140feca"):
             break
-    return data
+    return (data[0:-16], data[-16:-8])
 
 # Start image processing with the (hopefully) collected data
 if not os.path.exists("images"):
@@ -182,7 +185,8 @@ choice = input("Number: ")
 
 if choice.startswith("1"):
     while True:
-        SaveImage(CreateImage(CollectData()))
+        data, params = CollectData()
+        SaveImage(CreateImage(data, params))
         another = input("Print another? (y/N): ")
         if another.upper().startswith("Y"):
             continue
@@ -192,11 +196,14 @@ if choice.startswith("1"):
 elif choice.startswith("2"):
     while True:
         print("Please print your red layer")
-        red_img = CreateImage(CollectData())
+        red_data, red_params = CollectData()
+        red_img = CreateImage(red_data, red_params)
         print("Please print your green layer")
-        green_img = CreateImage(CollectData())
+        green_data, green_params = CollectData()
+        green_img = CreateImage(green_data, green_params)
         print("Please print your blue layer")
-        blue_img = CreateImage(CollectData())
+        blue_data, blue_params = CollectData()
+        blue_img = CreateImage(blue_data, blue_params)
         SaveImageRGB(red_img, green_img, blue_img)
         another = input("Print another? (y/N): ")
         if another.upper().startswith("Y"):
