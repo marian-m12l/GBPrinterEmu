@@ -5,6 +5,7 @@ A GameBoy Printer emulator for use with Stacksmashing's GB link cable adapter, u
 - You can print more than one image without restarting the script
 - You can also combine 3 red/green/filtered images into a single RGB image
 - I'm still de-rusting on my Python knowledge so this is super janky but it works
+- This version handles print parameters (palette and margins) and should support images of various heights
 
 # Dependencies
 - Python 3
